@@ -70,15 +70,20 @@ def latex_to_sympy(latex_str: str):
     s = re.sub(r'\\cdot', '*', s)
     s = s.replace('^', '**')
     s = s.replace('\\,', '')
+    s = s.replace('\\!', '')
+    s = s.replace('\\to', ' ')  # Remove \to (used in limits, handled separately)
+    s = re.sub(r'\\[a-zA-Z]+', '', s)  # Remove any remaining LaTeX commands
     s = re.sub(r'\s+', '', s)  # Remove all whitespace
     
     print(f"DEBUG after processing: {repr(s)}")
     
     # Handle limits - match original string first
-    lim_match = re.match(r'\\lim_\{([a-z])\\to([^}]+)\}(.+)', latex_str.strip())
+    # Supports: \lim_{x \to 0}, \lim_{x\to 0}, \lim_{x \to \infty}, etc.
+    orig = latex_str.strip()
+    lim_match = re.match(r'\\lim_\{([a-z])\s*\\to\s*([^}]+)\}(.+)', orig)
     if lim_match:
         var, point, expr_str = lim_match.groups()
-        point = point.replace('\\infty', 'oo').replace('0', '0')
+        point = point.strip().replace('\\infty', 'oo')
         inner = latex_to_sympy(expr_str)
         return Limit(inner, Symbol(var), sympify(point))
     
