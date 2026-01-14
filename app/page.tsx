@@ -7,15 +7,17 @@ import { ResultDisplay } from "./components/ResultDisplay";
 import { TestCaseSelector } from "./components/TestCaseSelector";
 import { ProcessLog } from "./components/ProcessLog";
 import { LoadingOverlay } from "./components/LoadingOverlay";
-import type { ComparisonResult } from "./lib/types";
+import { compareWithLambda } from "./lib/lambda-api";
+import type { ComparisonResult, ComparisonEngine } from "./lib/types";
 
 export default function Home() {
   const [latex1, setLatex1] = useState("");
   const [latex2, setLatex2] = useState("");
   const [result, setResult] = useState<ComparisonResult | null>(null);
   const [isComparing, setIsComparing] = useState(false);
+  const [engine, setEngine] = useState<ComparisonEngine>("lambda");
 
-  const { status, logs, compare, clearLogs } = usePyodide();
+  const { status, logs, compare, clearLogs, addLog } = usePyodide();
 
   const handleCompare = useCallback(async () => {
     if (!latex1.trim() || !latex2.trim()) return;
@@ -24,22 +26,42 @@ export default function Home() {
     setResult(null);
 
     try {
-      const comparisonResult = await compare(latex1, latex2);
-      setResult(comparisonResult);
+      if (engine === "lambda") {
+        addLog({ message: "Lambda API 호출 중...", type: "info" });
+        addLog({ message: `수식 1: ${latex1}`, type: "info" });
+        addLog({ message: `수식 2: ${latex2}`, type: "info" });
+        
+        const comparisonResult = await compareWithLambda(latex1, latex2);
+        setResult(comparisonResult);
+        
+        if (comparisonResult.error) {
+          addLog({ message: `오류: ${comparisonResult.error}`, type: "error" });
+        } else {
+          addLog({
+            message: `결과: ${comparisonResult.isEqual ? "동등함" : "다름"} ✅ (${comparisonResult.processingTimeMs}ms)`,
+            type: comparisonResult.isEqual ? "success" : "warning",
+          });
+        }
+      } else {
+        const comparisonResult = await compare(latex1, latex2);
+        setResult(comparisonResult);
+      }
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류";
       setResult({
         isEqual: null,
         expr1Canonical: "",
         expr2Canonical: "",
         simplifiedDiff: "",
         processingTimeMs: 0,
-        engine: "sympy",
-        error: error instanceof Error ? error.message : "알 수 없는 오류",
+        engine,
+        error: errorMessage,
       });
+      addLog({ message: `오류: ${errorMessage}`, type: "error" });
     } finally {
       setIsComparing(false);
     }
-  }, [latex1, latex2, compare]);
+  }, [latex1, latex2, compare, engine, addLog]);
 
   const handleTestCaseSelect = useCallback((l1: string, l2: string) => {
     setLatex1(l1);
@@ -60,38 +82,63 @@ export default function Home() {
             <p className="text-zinc-600 dark:text-zinc-400">
               Pyodide + SymPy를 활용한 수학적 수식 비교 프로토타입
             </p>
-            <div className="mt-2 flex items-center justify-center gap-2">
-              <span
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
-                  status === "ready"
-                    ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                    : status === "loading"
-                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-                    : status === "error"
-                    ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
-                    : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+            <div className="mt-4 flex items-center justify-center gap-2">
+              <button
+                onClick={() => setEngine("lambda")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  engine === "lambda"
+                    ? "bg-indigo-600 text-white shadow-md"
+                    : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
                 }`}
               >
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    status === "ready"
-                      ? "bg-green-500"
-                      : status === "loading"
-                      ? "bg-blue-500 animate-pulse"
-                      : status === "error"
-                      ? "bg-red-500"
-                      : "bg-zinc-400"
-                  }`}
-                />
-                {status === "ready"
-                  ? "준비됨"
-                  : status === "loading"
-                  ? "로딩 중..."
-                  : status === "error"
-                  ? "오류"
-                  : "대기 중"}
-              </span>
+                ☁️ Lambda API (서버)
+              </button>
+              <button
+                onClick={() => setEngine("sympy")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  engine === "sympy"
+                    ? "bg-indigo-600 text-white shadow-md"
+                    : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                }`}
+              >
+                🐍 Pyodide (브라우저)
+              </button>
             </div>
+
+            {engine === "sympy" && (
+              <div className="mt-2 flex items-center justify-center gap-2">
+                <span
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
+                    status === "ready"
+                      ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                      : status === "loading"
+                      ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                      : status === "error"
+                      ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                      : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      status === "ready"
+                        ? "bg-green-500"
+                        : status === "loading"
+                        ? "bg-blue-500 animate-pulse"
+                        : status === "error"
+                        ? "bg-red-500"
+                        : "bg-zinc-400"
+                    }`}
+                  />
+                  {status === "ready"
+                    ? "준비됨"
+                    : status === "loading"
+                    ? "로딩 중..."
+                    : status === "error"
+                    ? "오류"
+                    : "대기 중"}
+                </span>
+              </div>
+            )}
           </header>
 
           <div className="grid lg:grid-cols-2 gap-8">

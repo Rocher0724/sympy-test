@@ -24,7 +24,7 @@ export function LoadingOverlay({ status }: LoadingOverlayProps) {
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               SymPy 패키지를 설치하고 있습니다.
               <br />
-              첫 로딩은 약 10~20초 소요됩니다.
+              첫 로딩은 약 5~15초 소요됩니다.
             </p>
           </div>
         </div>

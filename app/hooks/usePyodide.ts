@@ -14,6 +14,7 @@ interface UsePyodideReturn {
   compare: (latex1: string, latex2: string) => Promise<ComparisonResult>;
   initPyodide: () => Promise<void>;
   clearLogs: () => void;
+  addLog: (entry: { message: string; type: LogEntry["type"] }) => void;
 }
 
 export function usePyodide(): UsePyodideReturn {
@@ -140,5 +141,13 @@ export function usePyodide(): UsePyodideReturn {
     };
   }, []);
 
-  return { status, logs, compare, initPyodide, clearLogs };
+  return {
+    status,
+    logs,
+    compare,
+    initPyodide,
+    clearLogs,
+    addLog: (entry: { message: string; type: LogEntry["type"] }) =>
+      addLog(entry.message, entry.type),
+  };
 }

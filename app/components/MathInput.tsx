@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef } from "react";
 import type { MathfieldElement } from "mathlive";
 
 interface MathInputProps {
@@ -20,23 +20,25 @@ export function MathInput({
 }: MathInputProps) {
   const mathfieldRef = useRef<MathfieldElement | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const onChangeRef = useRef(onChange);
+  const initialValueRef = useRef(value);
 
-  const handleInput = useCallback(() => {
-    if (mathfieldRef.current) {
-      onChange(mathfieldRef.current.getValue("latex"));
-    }
-  }, [onChange]);
+  onChangeRef.current = onChange;
 
   useEffect(() => {
     let mathfield: MathfieldElement | null = null;
+    let isMounted = true;
 
     const initMathfield = async () => {
-      await import("mathlive");
+      const mathlive = await import("mathlive");
 
-      if (!containerRef.current) return;
+      mathlive.MathfieldElement.fontsDirectory =
+        "https://unpkg.com/mathlive@0.108.2/fonts/";
+
+      if (!containerRef.current || !isMounted) return;
 
       mathfield = document.createElement("math-field") as MathfieldElement;
-      mathfield.value = value;
+      mathfield.value = initialValueRef.current;
       mathfield.setAttribute("placeholder", placeholder);
       mathfield.style.width = "100%";
       mathfield.style.fontSize = "1.25rem";
@@ -49,6 +51,12 @@ export function MathInput({
         mathfield.setAttribute("read-only", "true");
       }
 
+      const handleInput = () => {
+        if (mathfieldRef.current) {
+          onChangeRef.current(mathfieldRef.current.getValue("latex"));
+        }
+      };
+
       mathfield.addEventListener("input", handleInput);
       containerRef.current.appendChild(mathfield);
       mathfieldRef.current = mathfield;
@@ -57,12 +65,12 @@ export function MathInput({
     initMathfield();
 
     return () => {
+      isMounted = false;
       if (mathfield) {
-        mathfield.removeEventListener("input", handleInput);
         mathfield.remove();
       }
     };
-  }, [placeholder, disabled, handleInput, value]);
+  }, [placeholder, disabled]);
 
   useEffect(() => {
     if (mathfieldRef.current && mathfieldRef.current.getValue("latex") !== value) {

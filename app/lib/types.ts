@@ -1,11 +1,19 @@
+export type ComparisonEngine = "sympy" | "lambda" | "compute-engine";
+
 export interface ComparisonResult {
   isEqual: boolean | null;
   expr1Canonical: string;
   expr2Canonical: string;
   simplifiedDiff: string;
   processingTimeMs: number;
-  engine: "sympy" | "compute-engine";
+  engine: ComparisonEngine;
   error?: string;
+}
+
+export interface LambdaApiResponse {
+  expr_srepr: string;
+  expr_str: string;
+  latex: string;
 }
 
 export interface TestCase {
