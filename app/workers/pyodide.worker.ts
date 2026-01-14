@@ -82,18 +82,34 @@ def latex_to_sympy(latex_str: str):
         inner = latex_to_sympy(expr_str)
         return Limit(inner, Symbol(var), sympify(point))
     
-    # Handle definite integrals
-    int_match = re.match(r'\\int_([^\^]+)\^([^\s]+)(.+?)d([a-z])', latex_str.strip())
+    # Handle definite integrals - multiple formats
+    # Format 1: \int_{lower}^{upper} or \int_lower^upper
+    # Format 2: \int^{upper}_{lower} (MathLive sometimes uses this order)
+    orig = latex_str.strip()
+    
+    # Try format: \int_{...}^{...} or \int_...^...
+    int_match = re.match(r'\\int_\{?([^}^]+)\}?\^\{?([^}\s]+)\}?[\\!]?(.+?)(?:\\,)?(?:\\mathrm\{d\}|d)([a-z])', orig)
     if int_match:
         lower, upper, expr_str, var = int_match.groups()
-        inner = latex_to_sympy(expr_str)
+        lower = lower.replace('\\infty', 'oo').strip()
+        upper = upper.replace('\\infty', 'oo').strip()
+        inner = latex_to_sympy(expr_str.strip())
+        return Integral(inner, (Symbol(var), sympify(lower), sympify(upper)))
+    
+    # Try format: \int^{...}_{...} (reversed order)
+    int_match2 = re.match(r'\\int\^\{?([^}_]+)\}?_\{?([^}\s]+)\}?[\\!]?(.+?)(?:\\,)?(?:\\mathrm\{d\}|d)([a-z])', orig)
+    if int_match2:
+        upper, lower, expr_str, var = int_match2.groups()
+        lower = lower.replace('\\infty', 'oo').strip()
+        upper = upper.replace('\\infty', 'oo').strip()
+        inner = latex_to_sympy(expr_str.strip())
         return Integral(inner, (Symbol(var), sympify(lower), sympify(upper)))
     
     # Handle indefinite integrals
-    indef_match = re.match(r'\\int(.+?)d([a-z])', latex_str.strip())
+    indef_match = re.match(r'\\int[\\!]?(.+?)(?:\\,)?(?:\\mathrm\{d\}|d)([a-z])', orig)
     if indef_match:
         expr_str, var = indef_match.groups()
-        inner = latex_to_sympy(expr_str)
+        inner = latex_to_sympy(expr_str.strip())
         return Integral(inner, Symbol(var))
     
     # Handle derivatives
