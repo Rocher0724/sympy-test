@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const runtime = "edge";
+
 const LAMBDA_API_URL =
   "https://20oljrihy1.execute-api.ap-northeast-2.amazonaws.com/default/latex_canonical_transfer_lambda";
 
