@@ -57,14 +57,15 @@ def latex_to_sympy(latex_str: str):
     s = re.sub(r'\\log[\(\{]([^\)\}]+)[\)\}]', r'log(\g<1>)', s)
     s = re.sub(r'\\exp[\(\{]([^\)\}]+)[\)\}]', r'exp(\g<1>)', s)
     
-    # Step 7: Handle e^{...} -> exp(...) - must be after constants
+    # Step 7: Handle e^{...} and e^x -> exp(...) - must be after constants
     s = re.sub(r'e\^\{([^}]+)\}', r'exp(\g<1>)', s)
+    s = re.sub(r'e\^([a-zA-Z0-9])', r'exp(\g<1>)', s)  # e^x without braces
     
     # Step 8: Handle other exponents with braces
     s = re.sub(r'([a-zA-Z0-9])\^\{([^}]+)\}', r'\g<1>**(\g<2>)', s)
     
-    # Step 9: Handle simple exponents
-    s = re.sub(r'([a-zA-Z0-9])\^([0-9]+)', r'\g<1>**\g<2>', s)
+    # Step 9: Handle simple exponents (but not e^ which is already handled)
+    s = re.sub(r'([a-df-zA-Z0-9])\^([0-9]+)', r'\g<1>**\g<2>', s)  # exclude 'e'
     
     # Step 10: Cleanup
     s = re.sub(r'\\cdot', '*', s)
