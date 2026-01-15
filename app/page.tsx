@@ -74,7 +74,7 @@ export default function Home() {
       <LoadingOverlay status={status} />
 
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-zinc-950 dark:to-slate-900">
-        <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto px-4 py-8 pt-16 lg:pt-8">
           <header className="text-center mb-8">
             <h1 className="text-3xl font-bold text-zinc-800 dark:text-zinc-100 mb-2">
               🔬 LaTeX 수식 동등성 비교
